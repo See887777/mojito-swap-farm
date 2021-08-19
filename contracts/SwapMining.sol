@@ -30,10 +30,10 @@ contract SwapMining is Schedule, AccessControl {
         uint256 lastRewardBlock;    // Last block number that MJTs distribution occurs.
         uint256 quantity;           // Current amount of LPs
         uint256 totalQuantity;      // All quantity
-        uint256 allocMdxAmount;     // How many MDXs
+        uint256 allocMojitoAmount;  // How many MJTs
     }
 
-    // The Mojito token
+    // The mojito token
     IMojitoToken public mojito;
     // The swap router
     IMojitoRouter router;
@@ -46,13 +46,13 @@ contract SwapMining is Schedule, AccessControl {
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
-    // Info of each user that stakes LP tokens.
+    // Info of each user that swap quantity.
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Pair corresponding pid
     mapping(address => uint256) public pairOfPid;
     // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when Mojito mining starts.
+    // The block number when mojito mining starts.
     uint256 public startBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -95,7 +95,7 @@ contract SwapMining is Schedule, AccessControl {
         lastRewardBlock : lastRewardBlock,
         quantity : 0,
         totalQuantity : 0,
-        allocMdxAmount : 0
+        allocMojitoAmount : 0
         }));
 
         pairOfPid[_lpToken] = poolLength() - 1;
@@ -136,14 +136,15 @@ contract SwapMining is Schedule, AccessControl {
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        uint256 allocMdxAmount = pool.allocMdxAmount;
+        uint256 allocMojitoAmount = pool.allocMojitoAmount;
         if (user.quantity > 0) {
             uint256 blockReward = mintable(pool.lastRewardBlock);
             uint256 mojitoReward = blockReward.mul(pool.allocPoint).div(totalAllocPoint);
-            allocMdxAmount = allocMdxAmount.add(mojitoReward);
+            allocMojitoAmount = allocMojitoAmount.add(mojitoReward);
+            return user.quantity.mul(allocMojitoAmount).div(pool.quantity);
         }
 
-        return user.quantity.mul(allocMdxAmount).div(pool.quantity);
+        return 0;
     }
 
     // Update reward variables for all pools. Be careful of gas spending!
@@ -170,11 +171,10 @@ contract SwapMining is Schedule, AccessControl {
         }
         uint256 mojitoReward = blockReward.mul(pool.allocPoint).div(totalAllocPoint);
         mojito.mint(address(this), mojitoReward);
-        pool.allocMdxAmount = pool.allocMdxAmount.add(mojitoReward);
+        pool.allocMojitoAmount = pool.allocMojitoAmount.add(mojitoReward);
         pool.lastRewardBlock = block.number;
     }
 
-    //
     function swap(address account, address input, address output, uint256 amount) public onlyRouter returns (bool) {
         require(account != address(0), "SwapMining::swap: taker swap account is the zero address");
         require(input != address(0), "SwapMining::swap: taker swap input is the zero address");
@@ -183,7 +183,6 @@ contract SwapMining is Schedule, AccessControl {
         if (poolLength() <= 0) {
             return false;
         }
-        ///这两个币种需要在白名单中
         if (!isWhitelist(input) || !isWhitelist(output)) {
             return false;
         }
@@ -195,7 +194,6 @@ contract SwapMining is Schedule, AccessControl {
             return false;
         }
 
-        //
         uint256 quantity = getQuantity(output, amount, usdt);
         if (quantity <= 0) {
             return false;
@@ -223,9 +221,9 @@ contract SwapMining is Schedule, AccessControl {
                 updatePool(pid);
 
                 // The reward held by the user in this pool
-                uint256 userReward = pool.allocMdxAmount.mul(user.quantity).div(pool.quantity);
+                uint256 userReward = pool.allocMojitoAmount.mul(user.quantity).div(pool.quantity);
                 pool.quantity = pool.quantity.sub(user.quantity);
-                pool.allocMdxAmount = pool.allocMdxAmount.sub(userReward);
+                pool.allocMojitoAmount = pool.allocMojitoAmount.sub(userReward);
                 user.quantity = 0;
                 user.blockNumber = block.number;
                 userSub = userSub.add(userReward);
