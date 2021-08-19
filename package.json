@@ -25,7 +25,8 @@
     "solhint": "2.3.1",
     "solhint-plugin-prettier": "0.0.4",
     "solidity-coverage": "0.7.16",
-    "table": "6.7.1"
+    "table": "6.7.1",
+    "truffle": "5.3.6"
   },
   "scripts": {
     "compile": "truffle compile --all",
