@@ -1,302 +1,93 @@
-const Ethers      = require("ethers");
 const {
           accounts,
           contract,
-          privateKeys,
       }           = require("@openzeppelin/test-environment");
 const {
           BN,
-          constants,
           expectEvent,
+          time,
       }           = require("@openzeppelin/test-helpers");
 const {expect}    = require("chai");
 const MojitoToken = contract.fromArtifact("MojitoToken");
+const MasterChef  = contract.fromArtifact("MasterChef");
 
-async function eip712(privateKey, data) {
-    const wallet    = new Ethers.Wallet(privateKey);
-    const signature = await wallet._signTypedData(data.domain, data.types, data.value);
-    const result    = Ethers.utils.splitSignature(signature);
+describe("MasterChef", () => {
+    const [minter, alice, bob] = accounts;
 
-    return {
-        r: result.r,
-        s: result.s,
-        v: result.v,
-    };
-}
+    beforeEach(async () => {
+        this.mojito = await MojitoToken.new({from: minter});
+        this.lp1    = await MojitoToken.new({from: minter});
+        this.lp2    = await MojitoToken.new({from: minter});
+        this.lp3    = await MojitoToken.new({from: minter});
+        this.chef   = await MasterChef.new(this.mojito.address, "1000", "100", {from: minter});
+        const role  = await this.mojito.MINTER_ROLE();
+        await this.mojito.grantRole(role, this.chef.address, {from: minter});
 
-describe("MojitoToken", function () {
-    const [caller, Charlie, Bob, Alice, Malice, Trudy] = accounts;
-    const [_, charlie, bob, alice]                     = privateKeys;
+        await this.lp1.transfer(bob, "2000", {from: minter});
+        await this.lp2.transfer(bob, "2000", {from: minter});
+        await this.lp3.transfer(bob, "2000", {from: minter});
 
-    before(async function () {
-        this.self = await MojitoToken.new({from: caller});
+        await this.lp1.transfer(alice, "2000", {from: minter});
+        await this.lp2.transfer(alice, "2000", {from: minter});
+        await this.lp3.transfer(alice, "2000", {from: minter});
     });
 
-    it("name()", async function () {
-        expect(await this.self.name()).to.be.equal("MojitoToken");
-    });
+    it("real case", async () => {
+        this.lp4 = await MojitoToken.new({from: minter});
+        this.lp5 = await MojitoToken.new({from: minter});
+        this.lp6 = await MojitoToken.new({from: minter});
+        this.lp7 = await MojitoToken.new({from: minter});
+        this.lp8 = await MojitoToken.new({from: minter});
+        this.lp9 = await MojitoToken.new({from: minter});
+        await this.chef.add("2000", this.lp1.address, true, {from: minter});
+        await this.chef.add("1000", this.lp2.address, true, {from: minter});
+        await this.chef.add("500", this.lp3.address, true, {from: minter});
+        await this.chef.add("500", this.lp4.address, true, {from: minter});
+        await this.chef.add("500", this.lp5.address, true, {from: minter});
+        await this.chef.add("500", this.lp6.address, true, {from: minter});
+        await this.chef.add("500", this.lp7.address, true, {from: minter});
+        await this.chef.add("100", this.lp8.address, true, {from: minter});
+        await this.chef.add("100", this.lp9.address, true, {from: minter});
+        expect(await this.chef.poolLength()).to.be.bignumber.equal(new BN(10));
+        expect(await this.chef.totalAllocPoint()).to.be.bignumber.equal(new BN(7600));
 
-    it("symbol()", async function () {
-        expect(await this.self.symbol()).to.be.equal("MJT");
-    });
-
-    it("decimals()", async function () {
-        expect(await this.self.decimals()).to.be.bignumber.equal(new BN(18));
-    });
-
-    it("totalSupply()", async function () {
-        expect(await this.self.totalSupply()).to.be.bignumber.equal(new BN("25000000000000000000000000"));
-    });
-
-    it("balanceOf()", async function () {
-        expect(await this.self.balanceOf(caller)).to.be.bignumber.equal(new BN("25000000000000000000000000"));
-    });
-
-    it("delegates()", async function () {
-        expect(await this.self.delegates(Bob)).to.be.equal(constants.ZERO_ADDRESS);
-    });
-
-    it("numCheckpoints()", async function () {
-        expect(await this.self.numCheckpoints(Bob)).to.be.bignumber.equal(new BN(0));
-    });
-
-    it("checkpoints()", async function () {
-        expect((await this.self.checkpoints(Bob, 0)).votes).to.be.bignumber.equal(new BN(0));
-    });
-
-    it("transfer()", async function () {
-        expect(await this.self.delegates(caller)).to.be.equal(constants.ZERO_ADDRESS);
-        expect(await this.self.delegates(Bob)).to.be.equal(constants.ZERO_ADDRESS);
-
-        // Initial State
-        expectEvent(await this.self.transfer(Bob, "100000000000000000000", {from: caller}),
-            "Transfer",
+        // Alice Deposit
+        await time.advanceBlockTo("170");
+        expect(await this.lp1.balanceOf(alice)).to.be.bignumber.equal(new BN("2000"));
+        await this.lp1.approve(this.chef.address, "2000", {from: alice});
+        const AliceDepositTx = await this.chef.deposit(1, "2000", {from: alice});
+        expectEvent(AliceDepositTx,
+            "Deposit",
             {
-                from:  caller,
-                to:    Bob,
-                value: "100000000000000000000",
+                user:   alice,
+                pid:    "1",
+                amount: "2000",
             });
-        expect(await this.self.balanceOf(caller)).to.be.bignumber.equal(new BN("24999900000000000000000000"));
-        expect(await this.self.balanceOf(Bob)).to.be.bignumber.equal(new BN("100000000000000000000"));
-        expect(await this.self.numCheckpoints(caller)).to.be.bignumber.equal(new BN(0));
-        expect(await this.self.numCheckpoints(Bob)).to.be.bignumber.equal(new BN(0));
+        expect(await this.lp1.balanceOf(alice)).to.be.bignumber.equal(new BN(0));
 
-        // Bob delegates his 100 MJTs to Charlie
-        const Bob2CharlieDelagateTx = await this.self.delegate(Charlie, {from: Bob});
-        expectEvent(Bob2CharlieDelagateTx,
-            "DelegateChanged",
+        // Alice Withdraw(172)
+        const AliceWithdrawTx = await this.chef.withdraw(1, "2000", {from: alice});
+        expectEvent(AliceWithdrawTx,
+            "Withdraw",
             {
-                delegator:    Bob,
-                fromDelegate: constants.ZERO_ADDRESS,
-                toDelegate:   Charlie,
+                user:   alice,
+                pid:    "1",
+                amount: "2000",
             });
-        expectEvent(Bob2CharlieDelagateTx,
-            "DelegateVotesChanged",
-            {
-                delegate:        Charlie,
-                previousBalance: new BN(0),
-                newBalance:      new BN("100000000000000000000"),
-            });
-        expect(await this.self.delegates(Bob)).to.be.equal(Charlie);
-        expect(await this.self.balanceOf(Bob)).to.be.bignumber.equal(new BN("100000000000000000000"));
-        expect(await this.self.balanceOf(Charlie)).to.be.bignumber.equal(new BN(0));
-        expect(await this.self.numCheckpoints(Charlie)).to.be.bignumber.equal(new BN(1));
-        expect(await this.self.numCheckpoints(Bob)).to.be.bignumber.equal(new BN(0));
-        expect((await this.self.checkpoints(Charlie, 0)).votes).to.be.bignumber.equal(new BN("100000000000000000000"));
+        expect(await this.lp1.balanceOf(alice)).to.be.bignumber.equal(new BN("2000"));
+        // (172-171)*1000*2000/7600
+        expect(await this.mojito.balanceOf(alice)).to.be.bignumber.equal(new BN("263"));
 
-        // Bob transfers his 100 MJTs to Alice
-        expectEvent(await this.self.transfer(Alice, "100000000000000000000", {from: Bob}),
-            "Transfer",
-            {
-                from:  Bob,
-                to:    Alice,
-                value: "100000000000000000000",
-            });
-        expect(await this.self.balanceOf(Bob)).to.be.bignumber.equal(new BN(0));
-        expect(await this.self.balanceOf(Alice)).to.be.bignumber.equal(new BN("100000000000000000000"));
-        expect(await this.self.numCheckpoints(Charlie)).to.be.bignumber.equal(new BN(2));
-        expect(await this.self.numCheckpoints(Bob)).to.be.bignumber.equal(new BN(0));
-        expect(await this.self.numCheckpoints(Alice)).to.be.bignumber.equal(new BN(0));
-        expect((await this.self.checkpoints(Charlie, 0)).votes).to.be.bignumber.equal(new BN("100000000000000000000"));
-        expect((await this.self.checkpoints(Charlie, 1)).votes).to.be.bignumber.equal(new BN(0));
-    });
+        // Alice EnterStaking(173)
+        await this.mojito.approve(this.chef.address, "1000", {from: alice});
+        await this.chef.enterStaking("20", {from: alice}); //174
+        await this.chef.enterStaking("0", {from: alice});  //175
+        await this.chef.enterStaking("0", {from: alice});  //176
+        await this.chef.enterStaking("0", {from: alice});  //177
 
-    it("permit()", async function () {
-        const rawdata               = {
-            domain: {
-                name:              await this.self.name(),
-                chainId:           "1",
-                verifyingContract: this.self.address,
-            },
-            types:  {
-                Permit: [
-                    {
-                        name: "owner",
-                        type: "address",
-                    },
-                    {
-                        name: "spender",
-                        type: "address",
-                    },
-                    {
-                        name: "value",
-                        type: "uint256",
-                    },
-                    {
-                        name: "nonce",
-                        type: "uint256",
-                    },
-                    {
-                        name: "deadline",
-                        type: "uint256",
-                    },
-                ],
-            },
-            value:  {
-                "owner":    Alice,
-                "spender":  Malice,
-                "value":    1,
-                "nonce":    0,
-                "deadline": 12222222222222,
-            },
-        };
-        const result                = await eip712(alice, rawdata);
-        const Alice2MaliceApproveTx = await this.self.permit(
-            Alice,
-            Malice,
-            new BN("1"),
-            12222222222222,
-            result.v,
-            result.r,
-            result.s,
-            {from: caller});
-        expectEvent(Alice2MaliceApproveTx,
-            "Approval",
-            {
-                owner:   Alice,
-                spender: Malice,
-                value:   "1",
-            });
-        expect(await this.self.allowance(Alice, Malice)).to.be.bignumber.equal(new BN("1"));
-    });
-
-    it("delegateBySig()", async function () {
-        expect(await this.self.delegates(Bob)).to.be.equal(Charlie);
-        expect(await this.self.delegates(Alice)).to.be.equal(constants.ZERO_ADDRESS);
-        // Alice delegates her 100 MJTs to Charlie
-        const rawdata                 = {
-            domain: {
-                name:              await this.self.name(),
-                chainId:           "1",
-                verifyingContract: this.self.address,
-            },
-            types:  {
-                Delegation: [
-                    {
-                        name: "delegatee",
-                        type: "address",
-                    },
-                    {
-                        name: "nonce",
-                        type: "uint256",
-                    },
-                    {
-                        name: "expiry",
-                        type: "uint256",
-                    },
-                ],
-            },
-            value:  {
-                "delegatee": Charlie,
-                "nonce":     1,
-                "expiry":    12222222222222,
-            },
-        };
-        const result                  = await eip712(alice, rawdata);
-        const Alice2CharlieDeleagteTx = await this.self.delegateBySig(
-            Charlie,
-            1,
-            12222222222222,
-            result.v,
-            result.r,
-            result.s,
-            {from: caller});
-        expectEvent(Alice2CharlieDeleagteTx,
-            "DelegateChanged",
-            {
-                delegator:    Alice,
-                fromDelegate: constants.ZERO_ADDRESS,
-                toDelegate:   Charlie,
-            });
-        expectEvent(Alice2CharlieDeleagteTx,
-            "DelegateVotesChanged",
-            {
-                delegate:        Charlie,
-                previousBalance: new BN(0),
-                newBalance:      new BN("100000000000000000000"),
-            });
-        expect(await this.self.delegates(Alice)).to.be.equal(Charlie);
-        expect((await this.self.checkpoints(Charlie, 2)).votes).to.be.bignumber.equal(new BN("100000000000000000000"));
-    });
-
-    it("getCurrentVotes()", async function () {
-        expect(await this.self.getCurrentVotes(Charlie)).to.be.bignumber.equal(new BN("100000000000000000000"));
-    });
-
-    it("getPriorVotes()", async function () {
-        expect(await this.self.getPriorVotes(Charlie, 0)).to.be.bignumber.equal(new BN(0));
-        expect(await this.self.getPriorVotes(Charlie, 3)).to.be.bignumber.equal(new BN("100000000000000000000"));
-        expect(await this.self.getPriorVotes(Charlie, 4)).to.be.bignumber.equal(new BN(0));
-    });
-
-    it("setMinter()", async function () {
-        const role = await this.self.MINTER_ROLE();
-        expect(await this.self.getRoleMemberCount(role)).to.be.bignumber.equal(new BN(0));
-        expectEvent(await this.self.grantRole(role, Trudy, {from: caller}),
-            "RoleGranted",
-            {
-                role:    role,
-                account: Trudy,
-                sender:  caller,
-            });
-        expect(await this.self.getRoleMemberCount(role)).to.be.bignumber.equal(new BN(1));
-        expect(await this.self.hasRole(role, Trudy)).to.be.equal(true);
-    });
-
-    it("mint()", async function () {
-        expect(await this.self.totalSupply()).to.be.bignumber.equal(new BN("25000000000000000000000000"));
-        expect(await this.self.balanceOf(Trudy)).to.be.bignumber.equal(new BN("0"));
-        expectEvent(await this.self.mint(Trudy, "5000000000000000000000000", {from: Trudy}),
-            "Transfer",
-            {
-                from:  constants.ZERO_ADDRESS,
-                to:    Trudy,
-                value: "5000000000000000000000000",
-            });
-        expect(await this.self.balanceOf(Trudy)).to.be.bignumber.equal(new BN("5000000000000000000000000"));
-        expect(await this.self.totalSupply()).to.be.bignumber.equal(new BN("30000000000000000000000000"));
-    });
-
-    it("setOwner()", async function () {
-        const role = constants.ZERO_BYTES32;
-        expect(await this.self.getRoleMemberCount(role)).to.be.bignumber.equal(new BN(1));
-        expectEvent(await this.self.grantRole(role, Malice, {from: caller}),
-            "RoleGranted",
-            {
-                role:    role,
-                account: Malice,
-                sender:  caller,
-            });
-        expectEvent(await this.self.revokeRole(role, caller, {from: caller}),
-            "RoleRevoked",
-            {
-                role:    role,
-                account: caller,
-                sender:  caller,
-            });
-        expect(await this.self.getRoleMemberCount(role)).to.be.bignumber.equal(new BN(1));
-        expect(await this.self.hasRole(role, Malice)).to.be.equal(true);
-        expect(await this.self.hasRole(role, caller)).to.be.equal(false);
+        // 263-20+1/4*(177-174)*1000
+        expect(await this.mojito.balanceOf(alice)).to.be.bignumber.equal(new BN("993"));
+        expect((await this.chef.poolInfo(0)).allocPoint).to.be.bignumber.equal("1900");
     });
 
 });
