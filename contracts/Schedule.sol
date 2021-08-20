@@ -14,24 +14,34 @@ contract Schedule is Ownable {
     uint256 public epochStartBlock = 0;          //the block number when mojito starts
     uint256 public mojitoPerBlock = 0;           //mojito tokens created per block
 
+    event MintPeriodDurationTransferred(uint256 indexed previousMintPeriodDuration, uint256 indexed newMintPeriodDuration);
+    event DecayRateNumeratorTransferred(uint256 indexed previousDecayRateNumerator, uint256 indexed newDecayRateNumerator);
+    event EpochStartBlockTransferred(uint256 indexed previousEpochStartBlock, uint256 indexed newEpochStartBlock);
+    event MojitoPerBlockTransferred(uint256 indexed previousMojitoPerBlock, uint256 indexed newMojitoPerBlock);
+
     constructor(uint256 _mojitoPerBlock) public {
+        emit MojitoPerBlockTransferred(mojitoPerBlock, _mojitoPerBlock);
         mojitoPerBlock = _mojitoPerBlock;
     }
 
     function setMintPeriodDuration(uint256 _mintPeriodDuration) public onlyOwner {
+        emit MintPeriodDurationTransferred(mintPeriodDuration, _mintPeriodDuration);
         mintPeriodDuration = _mintPeriodDuration;
     }
 
     function setDecayRateNumerator(uint256 _decayRateNumerator) public onlyOwner {
         require(_decayRateNumerator < decayRateDenominator, "Schedule::setDecayRateNumerator: _decayRateNumerator overflow");
+        emit DecayRateNumeratorTransferred(decayRateNumerator, _decayRateNumerator);
         decayRateNumerator = _decayRateNumerator;
     }
 
     function setEpochStartBlock(uint256 _epochStartBlock) public onlyOwner {
+        emit EpochStartBlockTransferred(epochStartBlock, _epochStartBlock);
         epochStartBlock = _epochStartBlock;
     }
 
     function setMojitoPerBlock(uint256 _mojitoPerBlock) public virtual onlyOwner {
+        emit MojitoPerBlockTransferred(mojitoPerBlock, _mojitoPerBlock);
         mojitoPerBlock = _mojitoPerBlock;
     }
 
