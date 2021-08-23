@@ -36,13 +36,13 @@ contract SwapMining is Schedule, AccessControl {
     // The mojito token
     IMojitoToken public mojito;
     // The swap router
-    IMojitoRouter router;
+    IMojitoRouter public router;
     // The swap factory
-    IMojitoFactory factory;
+    IMojitoFactory public factory;
     // The price oracle
-    IMojitoOracle oracle;
+    IMojitoOracle public oracle;
     // The base coin
-    address usdt;
+    address public usdt;
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
