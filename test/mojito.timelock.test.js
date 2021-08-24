@@ -77,9 +77,9 @@ describe("MojitoTimelock", function () {
             "MojitoTimelock::withdraw: no tokens to release");
     });
 
-    it.skip("withdraw()", async function () {
+    it("withdraw()", async function () {
         for (let i = 0; i < 8; i++) {
-            const timeTo = this.now + 3 + (i + 1) * 10;
+            const timeTo = this.now + 3 + (i + 1) * 180 * 24 * 60 * 60;
             console.log(i + 1, this.now, timeTo);
             await time.increaseTo(timeTo);
 
