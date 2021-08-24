@@ -60,7 +60,7 @@ contract MojitoVault is Ownable, Pausable {
         treasury = _treasury;
 
         // Infinite approve
-        IERC20(_token).safeApprove(address(_masterchef), uint256(- 1));
+        IERC20(_token).safeApprove(address(_masterchef), uint256(-1));
     }
 
     /**
