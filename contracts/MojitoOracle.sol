@@ -115,7 +115,7 @@ contract MojitoOracle {
     }
 
     address public immutable factory;
-    uint public constant CYCLE = 15 minutes;
+    uint public constant PERIOD = 15 minutes;
 
     // mapping from pair address to a list of price observations of that pair
     mapping(address => Observation) public pairObservations;
@@ -128,7 +128,7 @@ contract MojitoOracle {
         address pair = IMojitoFactory(factory).getPair(tokenA, tokenB);
         Observation storage observation = pairObservations[pair];
         uint timeElapsed = block.timestamp - observation.timestamp;
-        require(timeElapsed >= CYCLE, "MojitoOracle::update: PERIOD_NOT_ELAPSED");
+        require(timeElapsed >= PERIOD, "MojitoOracle::update: PERIOD_NOT_ELAPSED");
         (uint price0Cumulative, uint price1Cumulative,) = MojitoOracleLibrary.currentCumulativePrices(pair);
         observation.timestamp = block.timestamp;
         observation.price0Cumulative = price0Cumulative;
