@@ -132,7 +132,7 @@ describe("Schedule", function () {
     });
 
     it("mintable(blockNumber>block.number)", async function () {
-        await expectRevert(this.self.mintable(50), "Schedule:blockNumber overflow");
+        await expectRevert(this.self.mintable(50), "Schedule::mintable: blockNumber overflow");
     });
 
     it.skip("mintable(mock)", async function () {

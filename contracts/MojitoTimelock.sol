@@ -59,7 +59,7 @@ contract MojitoTimelock {
 
     function withdraw() external {
         uint reward = getReward();
-        require(reward > 0, "MojitoTimelock: no tokens to release");
+        require(reward > 0, "MojitoTimelock::withdraw: no tokens to release");
 
         uint pCycle = (block.timestamp.sub(startTime)).div(PERIOD);
         cycle = pCycle >= CYCLE_TIMES ? CYCLE_TIMES : pCycle;
@@ -70,8 +70,8 @@ contract MojitoTimelock {
         emit Withdraw(msg.sender, beneficiary, reward);
     }
 
-    function setBeneficiary(address _newBeneficiary) public {
-        require(msg.sender == beneficiary, "MojitoTimelock: not beneficiary");
-        beneficiary = _newBeneficiary;
+    function setBeneficiary(address _beneficiary) public {
+        require(msg.sender == beneficiary, "MojitoTimelock::setBeneficiary: not beneficiary");
+        beneficiary = _beneficiary;
     }
 }

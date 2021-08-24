@@ -64,7 +64,7 @@ contract Schedule is Ownable {
     }
 
     function mintable(uint256 blockNumber) public view returns (uint256) {
-        require(blockNumber <= block.number, "Schedule:blockNumber overflow");
+        require(blockNumber <= block.number, "Schedule::mintable: blockNumber overflow");
 
         uint256 _mintable = 0;
         uint256 lastMintableBlock = blockNumber;
