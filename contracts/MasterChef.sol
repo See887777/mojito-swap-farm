@@ -92,9 +92,19 @@ contract MasterChef is Schedule {
         return poolInfo.length;
     }
 
+    // DO NOT add the same LP token more than once
+    function checkPoolDuplicate(IERC20 _lpToken) internal view {
+        uint256 length = poolInfo.length;
+        for (uint256 pid = 0; pid < length; ++pid) {
+            require(poolInfo[pid].lpToken != _lpToken, "MasterChef::add: existing pool");
+        }
+    }
+
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public onlyOwner {
+        checkPoolDuplicate(_lpToken);
+
         if (_withUpdate) {
             massUpdatePools();
         }

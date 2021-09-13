@@ -271,4 +271,8 @@ describe("SwapMining", () => {
         expect(await this.mojito.balanceOf(this.self.address)).to.be.bignumber.equal(new BN(62500));
     });
 
+    it("checkPoolDuplicate", async () => {
+        await expectRevert(this.self.add(1000, this.lp1.address, false, {from: caller}), "SwapMining::add: existing pool");
+    });
+
 });
