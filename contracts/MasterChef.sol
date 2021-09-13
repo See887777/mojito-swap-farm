@@ -4,6 +4,7 @@ pragma solidity =0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/IMigratorChef.sol";
 import "./interfaces/IMojitoToken.sol";
 import "./Schedule.sol";
@@ -15,7 +16,7 @@ import "./Schedule.sol";
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
-contract MasterChef is Schedule {
+contract MasterChef is Schedule, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -206,7 +207,7 @@ contract MasterChef is Schedule {
     }
 
     // Deposit LP tokens to MasterChef.
-    function deposit(uint256 _pid, uint256 _amount) public {
+    function deposit(uint256 _pid, uint256 _amount) public nonReentrant {
         require(_pid != 0, "MasterChef::deposit: _pid can only be farm pool");
 
         PoolInfo storage pool = poolInfo[_pid];
@@ -227,7 +228,7 @@ contract MasterChef is Schedule {
     }
 
     // Withdraw LP tokens from MasterChef.
-    function withdraw(uint256 _pid, uint256 _amount) public {
+    function withdraw(uint256 _pid, uint256 _amount) public nonReentrant {
         require(_pid != 0, "MasterChef::withdraw: _pid can only be farm pool");
 
         PoolInfo storage pool = poolInfo[_pid];
@@ -247,7 +248,7 @@ contract MasterChef is Schedule {
     }
 
     // Stake MJT tokens to MasterChef
-    function enterStaking(uint256 _amount) public {
+    function enterStaking(uint256 _amount) public nonReentrant {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[0][msg.sender];
         updatePool(0);
@@ -267,7 +268,7 @@ contract MasterChef is Schedule {
     }
 
     // Withdraw MJT tokens from MasterChef.
-    function leaveStaking(uint256 _amount) public {
+    function leaveStaking(uint256 _amount) public nonReentrant {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[0][msg.sender];
         require(user.amount >= _amount, "MasterChef::leaveStaking: _amount not good");
@@ -286,7 +287,7 @@ contract MasterChef is Schedule {
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function emergencyWithdraw(uint256 _pid) public {
+    function emergencyWithdraw(uint256 _pid) public nonReentrant {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         pool.lpToken.safeTransfer(address(msg.sender), user.amount);
