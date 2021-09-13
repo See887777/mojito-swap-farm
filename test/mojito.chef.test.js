@@ -5,6 +5,7 @@ const {
 const {
           BN,
           expectEvent,
+          expectRevert,
           time,
       }           = require("@openzeppelin/test-helpers");
 const {expect}    = require("chai");
@@ -88,6 +89,11 @@ describe("MasterChef", () => {
         // 263-20+1/4*(177-174)*1000
         expect(await this.mojito.balanceOf(alice)).to.be.bignumber.equal(new BN("993"));
         expect((await this.chef.poolInfo(0)).allocPoint).to.be.bignumber.equal("1900");
+    });
+
+    it("checkPoolDuplicate", async () => {
+        await this.chef.add("2000", this.lp1.address, true, {from: minter});
+        await expectRevert(this.chef.add("2000", this.lp1.address, true, {from: minter}), "MasterChef::add: existing pool");
     });
 
 });
